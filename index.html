@@ -1,81 +1,99 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <title>XRPL Trustlines & Balance Tracker</title>
-  <script src="https://cdn.jsdelivr.net/npm/xrpl/dist/xrpl.min.js"></script>
+<meta charset="UTF-8" />
+<title>XRPL Trustlines for Issuer</title>
+<script src="https://cdn.jsdelivr.net/npm/xrpl/dist/xrpl.min.js"></script>
+<style>
+  body {
+    font-family: Arial, sans-serif;
+    margin: 20px;
+  }
+  button {
+    padding: 8px 16px;
+    margin-top: 10px;
+  }
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 15px;
+  }
+  th, td {
+    border: 1px solid #ccc;
+    padding: 8px;
+    text-align: left;
+  }
+</style>
 </head>
 <body>
-  <h1>XRPL Wallet Balance & Trustlines</h1>
-  <label for="walletAddress">Wallet Address:</label>
-  <input type="text" id="walletAddress" placeholder="Enter your XRPL address" size="50" />
-  <button id="checkBtn">Check Balance</button>
+<h1>XRPL Trustlines for Issuer</h1>
+<p>Issuer Address: <strong id="issuerAddress">rG47hi9xKvEhjCD8LXhfxjRzuEEBxwGUbL</strong></p>
+<button id="fetchBtn">Fetch Trustlines</button>
 
-  <h2>Results</h2>
-  <div id="results">
-    <p>XRPL Balance: <span id="xrpBalance">-</span></p>
-    <p>Trustlines:</p>
-    <ul id="trustlines"></ul>
-    <p>Token Balance (Issuer: rG47hi9xKvEhjCD8LXhfxjRzuEEBxwGUbL): <span id="tokenBalance">-</span></p>
-  </div>
+<h2>Wallets and Balances</h2>
+<table>
+  <thead>
+    <tr>
+      <th>Number</th>
+      <th>Wallets</th>
+      <th>Balance</th>
+    </tr>
+  </thead>
+  <tbody id="resultsBody"></tbody>
+</table>
 
-  <script>
-    document.getElementById('checkBtn').onclick = async () => {
-      const address = document.getElementById('walletAddress').value.trim();
-      if (!address) {
-        alert('Please enter a wallet address.');
-        return;
-      }
+<script>
+const issuerAddress = 'rG47hi9xKvEhjCD8LXhfxjRzuEEBxwGUbL';
+const client = new xrpl.Client('wss://s1.ripple.com');
 
-      const client = new xrpl.Client('wss://s.altnet.rippletest.net:51233'); // Testnet, change for mainnet
-      await client.connect();
+document.getElementById('fetchBtn').onclick = async () => {
+  await client.connect();
+  const tbody = document.getElementById('resultsBody');
+  tbody.innerHTML = '';
 
-      try {
-        // Fetch account info
-        const accountInfo = await client.request({
-          command: 'account_info',
-          account: address,
-          ledger_index: 'validated'
-        });
+  try {
+    // Fetch all trustlines issued by the issuer
+    let marker = undefined;
+    const allTrustlines = [];
 
-        // XRP Balance
-        const xrpBalance = accountInfo.result.account_data.Balance / 1000000; // drops to XRP
-        document.getElementById('xrpBalance').textContent = xrpBalance + ' XRP';
+    do {
+      const response = await client.request({
+        command: 'account_lines',
+        account: issuerAddress,
+        ledger_index: 'validated',
+        limit: 400,
+        marker: marker
+      });
+      allTrustlines.push(...response.result.lines);
+      marker = response.result.marker;
+    } while (marker);
 
-        // Fetch trustlines
-        const trustlinesResponse = await client.request({
-          command: 'account_lines',
-          account: address,
-          ledger_index: 'validated'
-        });
+    // Filter trustlines to only those with the issuer address
+    const filteredTrustlines = allTrustlines.filter(
+      l => l.account === issuerAddress
+    );
 
-        // Clear previous trustlines
-        const trustlinesList = document.getElementById('trustlines');
-        trustlinesList.innerHTML = '';
+    // For each trustline, get the counterparty address
+    for (let i = 0; i < filteredTrustlines.length; i++) {
+      const line = filteredTrustlines[i];
+      const walletAddress = line.account;
+      const balance = line.balance;
 
-        trustlinesResponse.result.lines.forEach(line => {
-          const li = document.createElement('li');
-          li.textContent = `Currency: ${line.currency}, Limit: ${line.limit}, Balance: ${line.balance}, Issuer: ${line.account}`;
-          trustlinesList.appendChild(li);
-        });
-
-        // Fetch balance of specific token issued by the issuer
-        const tokenCurrency = 'YOUR_CURRENCY_CODE'; // Replace with your token's currency code, e.g., "XYZ"
-        const tokenLine = trustlinesResponse.result.lines.find(
-          line => line.currency === tokenCurrency && line.account === 'rG47hi9xKvEhjCD8LXhfxjRzuEEBxwGUbL'
-        );
-
-        const tokenBalance = tokenLine ? tokenLine.balance : '0';
-
-        document.getElementById('tokenBalance').textContent = tokenBalance;
-
-      } catch (error) {
-        console.error(error);
-        alert('Error fetching data. Make sure the address is correct.');
-      } finally {
-        await client.disconnect();
-      }
-    };
-  </script>
+      const row = document.createElement('tr');
+      row.innerHTML = `
+        <td>${i + 1}</td>
+        <td>${walletAddress}</td>
+        <td>${balance}</td>
+      `;
+      tbody.appendChild(row);
+    }
+  } catch (err) {
+    console.error(err);
+    alert('Error fetching trustlines. See console for details.');
+  } finally {
+    await client.disconnect();
+  }
+};
+</script>
 </body>
 </html>
