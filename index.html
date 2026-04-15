@@ -2,42 +2,17 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>XRPL Wallet Balance & Trustlines Tracker</title>
+  <title>XRPL Trustlines & Balance Tracker</title>
   <script src="https://cdn.jsdelivr.net/npm/xrpl/dist/xrpl.min.js"></script>
-  <style>
-    body {
-      font-family: Arial, sans-serif;
-      margin: 20px;
-    }
-    input {
-      width: 400px;
-      padding: 8px;
-      margin-right: 10px;
-    }
-    button {
-      padding: 8px 16px;
-    }
-    #results {
-      margin-top: 20px;
-    }
-  </style>
 </head>
 <body>
   <h1>XRPL Wallet Balance & Trustlines</h1>
-  <p>
-    Enter your XRPL wallet address and click "Check Balance". 
-    Replace the placeholders for your token's currency code and wallet address.
-  </p>
   <label for="walletAddress">Wallet Address:</label>
-  <input type="text" id="walletAddress" placeholder="Enter your XRPL address" />
-  <br /><br />
-  <label for="currencyCode">Token Currency Code:</label>
-  <input type="text" id="currencyCode" placeholder="e.g., XYZ" />
-  <br /><br />
+  <input type="text" id="walletAddress" placeholder="Enter your XRPL address" size="50" />
   <button id="checkBtn">Check Balance</button>
 
+  <h2>Results</h2>
   <div id="results">
-    <h2>Results</h2>
     <p>XRPL Balance: <span id="xrpBalance">-</span></p>
     <p>Trustlines:</p>
     <ul id="trustlines"></ul>
@@ -47,14 +22,12 @@
   <script>
     document.getElementById('checkBtn').onclick = async () => {
       const address = document.getElementById('walletAddress').value.trim();
-      const currencyCode = document.getElementById('currencyCode').value.trim();
-
-      if (!address || !currencyCode) {
-        alert('Please enter both wallet address and token currency code.');
+      if (!address) {
+        alert('Please enter a wallet address.');
         return;
       }
 
-      const client = new xrpl.Client('wss://s1.ripple.com'); // Mainnet WebSocket
+      const client = new xrpl.Client('wss://s.altnet.rippletest.net:51233'); // Testnet, change for mainnet
       await client.connect();
 
       try {
@@ -87,8 +60,9 @@
         });
 
         // Fetch balance of specific token issued by the issuer
+        const tokenCurrency = 'YOUR_CURRENCY_CODE'; // Replace with your token's currency code, e.g., "XYZ"
         const tokenLine = trustlinesResponse.result.lines.find(
-          line => line.currency === currencyCode && line.account === 'rG47hi9xKvEhjCD8LXhfxjRzuEEBxwGUbL'
+          line => line.currency === tokenCurrency && line.account === 'rG47hi9xKvEhjCD8LXhfxjRzuEEBxwGUbL'
         );
 
         const tokenBalance = tokenLine ? tokenLine.balance : '0';
