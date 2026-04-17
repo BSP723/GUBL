@@ -22,11 +22,28 @@
     padding: 8px;
     text-align: left;
   }
+  pre {
+    background-color: #f4f4f4;
+    padding: 10px;
+    overflow-x: auto;
+  }
 </style>
 </head>
 <body>
 <h1>Trustlines Linked to Issuer</h1>
 <p>Issuer Address: <strong id="issuerAddress">rG47hi9xKvEhjCD8LXhfxjRzuEEBxwGUbL</strong></p>
+
+<h2>API cURL Command</h2>
+<pre>
+curl -H 'Content-Type: application/json' -d '{
+  "method": "account_lines",
+  "params": [{
+    "account": "rG47hi9xKvEhjCD8LXhfxjRzuEEBxwGUbL",
+    "ledger_index": "validated"
+  }]
+}' https://s1.ripple.com:51234/
+</pre>
+
 <button id="fetchBtn">Fetch Trustlines</button>
 
 <h2>Wallets and Balances</h2>
